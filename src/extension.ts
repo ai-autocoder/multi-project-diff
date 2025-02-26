@@ -164,10 +164,19 @@ export function activate(context: vscode.ExtensionContext) {
 				a.fileExists === b.fileExists ? 0 : a.fileExists ? -1 : 1
 			);
 
+			const isCaseSensitiveFileSystem =
+				process.platform !== "win32" && process.platform !== "darwin";
+
 			// Remove the current file from the results
-			const currentResults = results.filter(
-				(r) => r.compareFilePath !== currentFilePath
-			);
+			const currentResults = results.filter((r) => {
+				if (isCaseSensitiveFileSystem) {
+					return r.compareFilePath !== currentFilePath;
+				} else {
+					return (
+						r.compareFilePath.toLowerCase() !== currentFilePath.toLowerCase()
+					);
+				}
+			});
 
 			const state = {
 				filePath: currentFilePath,
