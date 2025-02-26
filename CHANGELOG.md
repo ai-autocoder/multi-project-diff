@@ -4,7 +4,7 @@
 
 - Fix wrong path used for copy command when changing editor focus.
 - Prevent path case sensitivity issues.
-- Update command titles to be more descriptive. 
+- Update command titles to be more descriptive.
 - Update readme.
 - Code cleanup.
 
