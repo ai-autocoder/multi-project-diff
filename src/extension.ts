@@ -243,42 +243,6 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 	context.subscriptions.push(openDiffCmd);
 
-	// Command: Copy Over (only if missing)
-	const copyFileCmd = vscode.commands.registerCommand(
-		"multiProjectsDiff.copyFile",
-		async (diffResult: DiffResult) => {
-			if (!diffResult || diffResult.fileExists) {
-				vscode.window.showWarningMessage(
-					"File already exists in the target project or invalid item."
-				);
-				return;
-			}
-
-			const sourcePath = diffState.getCurrentState().filePath;
-			if (sourcePath && !fs.existsSync(sourcePath)) {
-				vscode.window.showErrorMessage(
-					`Source file does not exist: ${sourcePath}`
-				);
-				return;
-			}
-
-			try {
-				const targetPath = diffResult.compareFilePath;
-				const dirName = path.dirname(targetPath);
-				if (!fs.existsSync(dirName)) {
-					fs.mkdirSync(dirName, { recursive: true });
-				}
-				fs.copyFileSync(sourcePath as string, targetPath);
-				vscode.window.showInformationMessage(`Copied file to: ${targetPath}`);
-				// Re-run the diff to update status
-				await runDiff();
-			} catch (err: any) {
-				vscode.window.showErrorMessage(`Failed to copy file: ${err.message}`);
-			}
-		}
-	);
-	context.subscriptions.push(copyFileCmd);
-
 	// Command: createAndCopyFile
 	const createAndCopyCmd = vscode.commands.registerCommand(
 		"multiProjectsDiff.createAndCopyFile",
