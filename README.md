@@ -17,7 +17,7 @@ Multi Projects Diff
 
 Compare the currently open file in the editor against corresponding files in other project paths (within the same configured group).
 
-![Image of UI overview](./screenshot1.png)
+![Image of UI overview](screenshot1.png)
 
 ## Features
 
