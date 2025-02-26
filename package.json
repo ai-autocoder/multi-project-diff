@@ -2,7 +2,7 @@
 	"name": "multi-projects-diff",
 	"displayName": "Multi Projects Diff",
 	"description": "Compare a file against multiple projects/folders within defined groups.  Easily view differences, copy content, and navigate between projects.",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"publisher": "FrancescoAnzalone",
 	"icon": "icon.png",
 	"repository": {
