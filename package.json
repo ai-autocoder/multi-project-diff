@@ -54,12 +54,12 @@
 			},
 			{
 				"command": "multiProjectsDiff.createAndCopyFile",
-				"title": "Create and Copy File",
+				"title": "Create and push content from active file",
 				"icon": "$(add)"
 			},
 			{
 				"command": "multiProjectsDiff.copyContent",
-				"title": "Copy Main File Content to This File",
+				"title": "Push content from active file to this project",
 				"icon": "$(cloud-upload)"
 			},
 			{
