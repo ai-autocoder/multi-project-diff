@@ -254,13 +254,8 @@ export function activate(context: vscode.ExtensionContext) {
 				return;
 			}
 
-			const editor = vscode.window.activeTextEditor;
-			if (!editor) {
-				vscode.window.showErrorMessage("No active editor found to copy from.");
-				return;
-			}
-			const sourcePath = editor.document.fileName;
-			if (!fs.existsSync(sourcePath)) {
+			const sourcePath = diffState.getCurrentState().filePath;
+			if (sourcePath && !fs.existsSync(sourcePath)) {
 				vscode.window.showErrorMessage(
 					`Source file does not exist: ${sourcePath}`
 				);
@@ -273,7 +268,7 @@ export function activate(context: vscode.ExtensionContext) {
 				if (!fs.existsSync(dirName)) {
 					fs.mkdirSync(dirName, { recursive: true });
 				}
-				fs.copyFileSync(sourcePath, targetPath);
+				fs.copyFileSync(sourcePath as string, targetPath);
 				vscode.window.showInformationMessage(`Copied file to: ${targetPath}`);
 				// Re-run the diff to update status
 				await runDiff();
@@ -288,7 +283,7 @@ export function activate(context: vscode.ExtensionContext) {
 	const createAndCopyCmd = vscode.commands.registerCommand(
 		"multiProjectsDiff.createAndCopyFile",
 		async (item: DiffItem) => {
-			const editor = vscode.window.activeTextEditor;
+			const editor = diffState.getCurrentState().filePath;
 			if (!editor) {
 				vscode.window.showErrorMessage(
 					"No active editor to copy content from."
@@ -296,10 +291,10 @@ export function activate(context: vscode.ExtensionContext) {
 				return;
 			}
 
-			const sourcePath = editor.document.fileName;
+			const sourcePath = diffState.getCurrentState().filePath;
 			const targetPath = item.diff.compareFilePath;
 
-			if (!fs.existsSync(sourcePath)) {
+			if (sourcePath && !fs.existsSync(sourcePath)) {
 				vscode.window.showErrorMessage("Source file does not exist.");
 				return;
 			}
@@ -309,7 +304,7 @@ export function activate(context: vscode.ExtensionContext) {
 				if (!fs.existsSync(targetDir)) {
 					fs.mkdirSync(targetDir, { recursive: true });
 				}
-				fs.copyFileSync(sourcePath, targetPath);
+				fs.copyFileSync(sourcePath as string, targetPath);
 				vscode.window.showInformationMessage(
 					`File created and content copied to: ${targetPath}`
 				);
@@ -400,24 +395,16 @@ export function activate(context: vscode.ExtensionContext) {
 	const copyContentCmd = vscode.commands.registerCommand(
 		"multiProjectsDiff.copyContent",
 		async (item: DiffItem) => {
-			const editor = vscode.window.activeTextEditor;
-			if (!editor) {
-				vscode.window.showErrorMessage(
-					"No active editor to copy content from."
-				);
-				return;
-			}
-
-			const sourcePath = editor.document.fileName;
+			const sourcePath = diffState.getCurrentState().filePath;
 			const targetPath = item.diff.compareFilePath;
 
-			if (!fs.existsSync(sourcePath)) {
+			if (sourcePath && !fs.existsSync(sourcePath)) {
 				vscode.window.showErrorMessage("Source file does not exist.");
 				return;
 			}
 
 			try {
-				fs.copyFileSync(sourcePath, targetPath);
+				fs.copyFileSync(sourcePath as string, targetPath);
 				vscode.window.showInformationMessage(
 					`Content copied to: ${targetPath}`
 				);
