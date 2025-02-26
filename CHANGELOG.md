@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.1.1]
+
+- Fix screenshot image in README
+
 ## [1.1.0]
 
 - Fix wrong path used for copy command when changing editor focus.
