@@ -85,7 +85,6 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 
 			const currentFilePath = editor.document.fileName;
-			const doc = editor.document;
 			const diffGroups: DiffGroup[] =
 				workspaceConfig.get<DiffGroup[]>("diffGroups") || [];
 
@@ -134,14 +133,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 			// We have a matching group
 			// Derive a relative path for the file
-			let relativePath: string;
-			const wsFolder = vscode.workspace.getWorkspaceFolder(doc.uri);
-			if (wsFolder) {
-				relativePath = path.relative(wsFolder.uri.fsPath, currentFilePath);
-			} else {
-				// fallback: just use the basename
-				relativePath = path.basename(currentFilePath);
-			}
+			const relativePath: string = path.relative(
+				matchingProject?.path || "",
+				currentFilePath
+			);
 
 			// Do the comparisons
 			const results: DiffResult[] = [];
