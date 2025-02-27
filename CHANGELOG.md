@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.1.2]
+
+- Fix relative path when reference file is outside the current workspace
+
 ## [1.1.1]
 
 - Fix screenshot image in README
