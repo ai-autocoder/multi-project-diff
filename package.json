@@ -1,174 +1,175 @@
 {
-	"name": "multi-projects-diff",
-	"displayName": "Multi Projects Diff",
-	"description": "Compare a file against multiple projects/folders within defined groups.  Easily view differences, copy content, and navigate between projects.",
-	"version": "1.1.2",
-	"publisher": "FrancescoAnzalone",
-	"icon": "icon.png",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/ai-autocoder/multi-project-diff"
-	},
-	"engines": {
-		"vscode": "^1.70.0"
-	},
-	"categories": [
-		"Other"
-	],
-	"keywords": [
-		"diff",
-		"compare",
-		"multiple projects",
-		"workspace",
-		"version control"
-	],
-	"activationEvents": [],
-	"main": "./out/extension.js",
-	"contributes": {
-		"views": {
-			"explorer": [
-				{
-					"id": "multiProjectsDiffView",
-					"name": "Multi Projects Diff"
-				}
-			]
-		},
-		"commands": [
-			{
-				"command": "multiProjectsDiff.refreshDiff",
-				"title": "Refresh Diff"
-			},
-			{
-				"command": "multiProjectsDiff.openDiff",
-				"title": "Open Split-Screen Diff"
-			},
-			{
-				"command": "multiProjectsDiff.openFile",
-				"title": "Open File",
-				"icon": "$(file)"
-			},
-			{
-				"command": "multiProjectsDiff.openFolder",
-				"title": "Open Workspace",
-				"icon": "$(folder)"
-			},
-			{
-				"command": "multiProjectsDiff.createAndCopyFile",
-				"title": "Create and push content from active file",
-				"icon": "$(add)"
-			},
-			{
-				"command": "multiProjectsDiff.copyContent",
-				"title": "Push content from active file to this project",
-				"icon": "$(cloud-upload)"
-			},
-			{
-				"command": "multiProjectsDiff.pickGroup",
-				"title": "Pick Group",
-				"icon": "$(folder-opened)"
-			}
-		],
-		"menus": {
-			"view/item/context": [
-				{
-					"command": "multiProjectsDiff.createAndCopyFile",
-					"when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileMissing",
-					"group": "inline"
-				},
-				{
-					"command": "multiProjectsDiff.copyContent",
-					"when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileExists",
-					"group": "inline"
-				},
-				{
-					"command": "multiProjectsDiff.openFile",
-					"when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileExists",
-					"group": "inline"
-				},
-				{
-					"command": "multiProjectsDiff.openFolder",
-					"when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileExists",
-					"group": "inline"
-				},
-				{
-					"command": "multiProjectsDiff.pickGroup",
-					"when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.noValidGroup",
-					"group": "inline"
-				}
-			]
-		},
-		"configuration": {
-			"title": "Multi Projects Diff",
-			"properties": {
-				"multiProjectsDiff.diffGroups": {
-					"type": "array",
-					"description": "Configure diff groups for comparing multiple workspaces.",
-					"items": {
-						"type": "object",
-						"required": [
-							"name",
-							"workspaces"
-						],
-						"properties": {
-							"name": {
-								"type": "string",
-								"description": "Unique name for the diff group"
-							},
-							"ignoreWhiteSpace": {
-								"type": "boolean",
-								"default": false,
-								"description": "Ignore whitespace changes in diffs"
-							},
-							"workspaces": {
-								"type": "array",
-								"description": "List of workspaces to compare",
-								"default": [],
-								"items": {
-									"type": "object",
-									"required": [
-										"name",
-										"path"
-									],
-									"properties": {
-										"name": {
-											"type": "string",
-											"description": "Display name for the workspace"
-										},
-										"path": {
-											"type": "string",
-											"description": "Absolute path to the workspace directory"
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	},
-	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./",
-		"pretest": "npm run compile && npm run lint",
-		"lint": "eslint src",
-		"test": "vscode-test"
-	},
-	"devDependencies": {
-		"@types/diff": "^7.0.0",
-		"@types/mocha": "^10.0.10",
-		"@types/node": "20.x",
-		"@types/vscode": "^1.70.0",
-		"@typescript-eslint/eslint-plugin": "^8.17.0",
-		"@typescript-eslint/parser": "^8.17.0",
-		"@vscode/test-cli": "^0.0.10",
-		"@vscode/test-electron": "^2.4.1",
-		"eslint": "^9.16.0",
-		"typescript": "^5.7.2"
-	},
-	"dependencies": {
-		"diff": "^7.0.0",
-		"md5": "^2.3.0"
-	}
+    "name": "multi-projects-diff",
+    "displayName": "Multi Projects Diff",
+    "description": "Compare a file against multiple projects/folders within defined groups.  Easily view differences, copy content, and navigate between projects.",
+    "version": "1.1.2",
+    "publisher": "FrancescoAnzalone",
+    "icon": "icon.png",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ai-autocoder/multi-project-diff"
+    },
+    "engines": {
+        "vscode": "^1.70.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "keywords": [
+        "diff",
+        "compare",
+        "multiple projects",
+        "workspace",
+        "version control"
+    ],
+    "activationEvents": [],
+    "main": "./out/extension.js",
+    "contributes": {
+        "views": {
+            "explorer": [
+                {
+                    "id": "multiProjectsDiffView",
+                    "name": "Multi Projects Diff"
+                }
+            ]
+        },
+        "commands": [
+            {
+                "command": "multiProjectsDiff.refreshDiff",
+                "title": "Refresh Diff"
+            },
+            {
+                "command": "multiProjectsDiff.openDiff",
+                "title": "Open Split-Screen Diff"
+            },
+            {
+                "command": "multiProjectsDiff.openFile",
+                "title": "Open File",
+                "icon": "$(file)"
+            },
+            {
+                "command": "multiProjectsDiff.openFolder",
+                "title": "Open Workspace",
+                "icon": "$(folder)"
+            },
+            {
+                "command": "multiProjectsDiff.createAndCopyFile",
+                "title": "Create and push content from active file",
+                "icon": "$(add)"
+            },
+            {
+                "command": "multiProjectsDiff.copyContent",
+                "title": "Push content from active file to this project",
+                "icon": "$(cloud-upload)"
+            },
+            {
+                "command": "multiProjectsDiff.pickGroup",
+                "title": "Pick Group",
+                "icon": "$(folder-opened)"
+            }
+        ],
+        "menus": {
+            "view/item/context": [
+                {
+                    "command": "multiProjectsDiff.createAndCopyFile",
+                    "when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileMissing",
+                    "group": "inline"
+                },
+                {
+                    "command": "multiProjectsDiff.copyContent",
+                    "when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileExists",
+                    "group": "inline"
+                },
+                {
+                    "command": "multiProjectsDiff.openFile",
+                    "when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileExists",
+                    "group": "inline"
+                },
+                {
+                    "command": "multiProjectsDiff.openFolder",
+                    "when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileExists",
+                    "group": "inline"
+                },
+                {
+                    "command": "multiProjectsDiff.pickGroup",
+                    "when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.noValidGroup",
+                    "group": "inline"
+                }
+            ]
+        },
+        "configuration": {
+            "title": "Multi Projects Diff",
+            "properties": {
+                "multiProjectsDiff.diffGroups": {
+                    "type": "array",
+                    "description": "Configure diff groups for comparing multiple workspaces.",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "name",
+                            "workspaces"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "Unique name for the diff group"
+                            },
+                            "ignoreWhiteSpace": {
+                                "type": "boolean",
+                                "default": false,
+                                "description": "Ignore whitespace changes in diffs"
+                            },
+                            "workspaces": {
+                                "type": "array",
+                                "description": "List of workspaces to compare",
+                                "default": [],
+                                "items": {
+                                    "type": "object",
+                                    "required": [
+                                        "name",
+                                        "path"
+                                    ],
+                                    "properties": {
+                                        "name": {
+                                            "type": "string",
+                                            "description": "Display name for the workspace"
+                                        },
+                                        "path": {
+                                            "type": "string",
+                                            "description": "Absolute path to the workspace directory"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "pretest": "npm run compile && npm run lint",
+        "lint": "eslint src",
+        "test": "vscode-test"
+    },
+    "devDependencies": {
+        "@types/diff": "^7.0.0",
+        "@types/mocha": "^10.0.10",
+        "@types/node": "20.x",
+        "@types/vscode": "^1.70.0",
+        "@typescript-eslint/eslint-plugin": "^8.17.0",
+        "@typescript-eslint/parser": "^8.17.0",
+        "@vscode/test-cli": "^0.0.10",
+        "@vscode/test-electron": "^2.4.1",
+        "eslint": "^9.16.0",
+        "typescript": "^5.7.2"
+    },
+    "dependencies": {
+        "diff": "^7.0.0",
+        "md5": "^2.3.0"
+    },
+    "license": "MIT"
 }
