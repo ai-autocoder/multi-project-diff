@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.2.0]
+
+- Add "Open Terminal" button in diff view
+- Display "Open Folder" button for missing files, in addition to existing files
+- Minor bug fixes and improvements
+
 ## [1.1.2]
 
 - Fix relative path when reference file is outside the current workspace
