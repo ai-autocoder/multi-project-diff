@@ -66,6 +66,11 @@
                 "command": "multiProjectsDiff.pickGroup",
                 "title": "Pick Group",
                 "icon": "$(folder-opened)"
+            },
+            {
+                "command": "multiProjectsDiff.openTerminal",
+                "title": "Open Terminal",
+                "icon": "$(terminal)"
             }
         ],
         "menus": {
@@ -93,6 +98,11 @@
                 {
                     "command": "multiProjectsDiff.pickGroup",
                     "when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.noValidGroup",
+                    "group": "inline"
+                },
+                {
+                    "command": "multiProjectsDiff.openTerminal",
+                    "when": "view == multiProjectsDiffView && viewItem != multiProjectsDiff.noValidGroup",
                     "group": "inline"
                 }
             ]

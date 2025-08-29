@@ -375,6 +375,17 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	);
 	context.subscriptions.push(copyContentCmd);
+
+	// Command: openTerminal
+	const openTerminalCmd = vscode.commands.registerCommand(
+		"multiProjectsDiff.openTerminal",
+		async (item: DiffItem) => {
+			const terminal = vscode.window.createTerminal();
+			terminal.sendText(`cd ${item.diff.compareWorkspaceFilePath}`);
+			terminal.show();
+		}
+	);
+	context.subscriptions.push(openTerminalCmd);
 }
 
 export function deactivate() {

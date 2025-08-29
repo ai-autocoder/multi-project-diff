@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { DiffResult } from "./diffCalculator";
-import { Project, DiffGroup, MatchingGroup } from "./extension";
+import { Project, MatchingGroup } from "./extension";
 
 /**
  * A single entry in our "Multi Projects Diff" tree.
