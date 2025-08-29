@@ -76,11 +76,6 @@
         "menus": {
             "view/item/context": [
                 {
-                    "command": "multiProjectsDiff.createAndCopyFile",
-                    "when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileMissing",
-                    "group": "inline"
-                },
-                {
                     "command": "multiProjectsDiff.copyContent",
                     "when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileExists",
                     "group": "inline"
@@ -103,6 +98,11 @@
                 {
                     "command": "multiProjectsDiff.openTerminal",
                     "when": "view == multiProjectsDiffView && (viewItem == multiProjectsDiff.fileExists || viewItem == multiProjectsDiff.fileMissing)",
+                    "group": "inline"
+                },
+                {
+                    "command": "multiProjectsDiff.createAndCopyFile",
+                    "when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileMissing",
                     "group": "inline"
                 }
             ]
