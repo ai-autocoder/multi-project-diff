@@ -102,7 +102,7 @@
                 },
                 {
                     "command": "multiProjectsDiff.openTerminal",
-                    "when": "view == multiProjectsDiffView && viewItem != multiProjectsDiff.noValidGroup",
+                    "when": "view == multiProjectsDiffView && (viewItem == multiProjectsDiff.fileExists || viewItem == multiProjectsDiff.fileMissing)",
                     "group": "inline"
                 }
             ]
