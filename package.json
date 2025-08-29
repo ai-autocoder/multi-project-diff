@@ -92,7 +92,7 @@
                 },
                 {
                     "command": "multiProjectsDiff.openFolder",
-                    "when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileExists",
+                    "when": "view == multiProjectsDiffView && (viewItem == multiProjectsDiff.fileExists || viewItem == multiProjectsDiff.fileMissing)",
                     "group": "inline"
                 },
                 {
