@@ -21,7 +21,7 @@ Compare the currently open file in the editor against corresponding files in oth
 
 ## Features
 
-1. **Project Diff View:** A dedicated view in the Explorer sidebar lists all projects within the matched group for the current file, enabling quick comparison.
+1. **Project Diff View:** A dedicated view in the Activity Bar lists all projects within the matched group for the current file, enabling quick comparison.
 
 2. **Flexible Reference File Selection:**
     *   **Set as Reference:** Use the inline "Set as Reference" action (pin icon) on any file in the list to make it the reference for comparison.
@@ -42,7 +42,7 @@ Compare the currently open file in the editor against corresponding files in oth
 ## How to Use
 
 1.  **Open a file** you want to use for comparison. This becomes the initial reference file the first time you run the diff.
-2.  Open the **"MULTI PROJECTS DIFF"** view in the Explorer sidebar. The view will show the comparison of your active file against other projects in the same group.
+2.  Open the **"MULTI PROJECTS DIFF"** view from the Activity Bar. The view will show the comparison of your active file against other projects in the same group.
 3.  **Change the Reference File (Optional):**
     *   Click **Set as Reference** (pin icon) next to any file in the list to set it as the new reference for all comparisons.
     *   Click **Use Active File as Reference** (target icon) in the toolbar to set the file currently active in your editor as the reference.
