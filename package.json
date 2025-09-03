@@ -25,8 +25,17 @@
     "activationEvents": [],
     "main": "./out/extension.js",
     "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "multiProjectsDiffContainer",
+                    "title": "Multi Projects Diff",
+                    "icon": "$(arrow-swap)"
+                }
+            ]
+        },
         "views": {
-            "explorer": [
+            "multiProjectsDiffContainer": [
                 {
                     "id": "multiProjectsDiffView",
                     "name": "Multi Projects Diff"
