@@ -36,7 +36,18 @@
         "commands": [
             {
                 "command": "multiProjectsDiff.refreshDiff",
-                "title": "Refresh Diff"
+                "title": "Refresh Diff",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "multiProjectsDiff.setActiveAsReference",
+                "title": "Use Active File as Reference",
+                "icon": "$(target)"
+            },
+            {
+                "command": "multiProjectsDiff.setReferenceFile",
+                "title": "Set as Reference",
+                "icon": "$(pin)"
             },
             {
                 "command": "multiProjectsDiff.openDiff",
@@ -54,12 +65,12 @@
             },
             {
                 "command": "multiProjectsDiff.createAndCopyFile",
-                "title": "Create and push content from active file",
+                "title": "Create and push content from reference file",
                 "icon": "$(add)"
             },
             {
                 "command": "multiProjectsDiff.copyContent",
-                "title": "Push content from active file to this project",
+                "title": "Push content from reference file to this project",
                 "icon": "$(cloud-upload)"
             },
             {
@@ -74,21 +85,28 @@
             }
         ],
         "menus": {
+            "view/title": [
+                {
+                    "command": "multiProjectsDiff.setActiveAsReference",
+                    "when": "view == multiProjectsDiffView",
+                    "group": "navigation"
+                }
+            ],
             "view/item/context": [
                 {
-                    "command": "multiProjectsDiff.copyContent",
+                    "command": "multiProjectsDiff.setReferenceFile",
                     "when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileExists",
-                    "group": "inline"
+                    "group": "inline@1"
                 },
                 {
                     "command": "multiProjectsDiff.openFile",
                     "when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileExists",
-                    "group": "inline"
+                    "group": "inline@2"
                 },
                 {
                     "command": "multiProjectsDiff.openFolder",
                     "when": "view == multiProjectsDiffView && (viewItem == multiProjectsDiff.fileExists || viewItem == multiProjectsDiff.fileMissing)",
-                    "group": "inline"
+                    "group": "inline@3"
                 },
                 {
                     "command": "multiProjectsDiff.pickGroup",
@@ -98,12 +116,17 @@
                 {
                     "command": "multiProjectsDiff.openTerminal",
                     "when": "view == multiProjectsDiffView && (viewItem == multiProjectsDiff.fileExists || viewItem == multiProjectsDiff.fileMissing)",
-                    "group": "inline"
+                    "group": "inline@4"
+                },
+                {
+                    "command": "multiProjectsDiff.copyContent",
+                    "when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileExists",
+                    "group": "inline@5"
                 },
                 {
                     "command": "multiProjectsDiff.createAndCopyFile",
                     "when": "view == multiProjectsDiffView && viewItem == multiProjectsDiff.fileMissing",
-                    "group": "inline"
+                    "group": "inline@5"
                 }
             ]
         },

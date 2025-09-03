@@ -23,17 +23,22 @@ class DiffState {
 	private currentResults: DiffResult[] = [];
 	private currentMatchingGroup: MatchingGroup;
 	private currentMatchingProject: Project | undefined;
+	private currentReferenceFilePath: string | null = null;
 
 	setCurrentState(state: {
 		filePath: string | null;
 		results: DiffResult[];
 		matchingGroup: MatchingGroup;
 		matchingProject?: Project;
+		referenceFilePath?: string | null;
 	}) {
 		this.currentFilePath = state.filePath;
 		this.currentResults = state.results;
 		this.currentMatchingGroup = state.matchingGroup;
 		this.currentMatchingProject = state.matchingProject;
+		if (state.referenceFilePath !== undefined) {
+			this.currentReferenceFilePath = state.referenceFilePath;
+		}
 	}
 
 	getCurrentState() {
@@ -42,7 +47,12 @@ class DiffState {
 			results: this.currentResults,
 			matchingGroup: this.currentMatchingGroup,
 			matchingProject: this.currentMatchingProject,
+			referenceFilePath: this.currentReferenceFilePath,
 		};
+	}
+
+	setReferenceFile(filePath: string | null) {
+		this.currentReferenceFilePath = filePath;
 	}
 
 	clearState() {
@@ -50,6 +60,7 @@ class DiffState {
 		this.currentResults = [];
 		this.currentMatchingGroup = undefined;
 		this.currentMatchingProject = undefined;
+		this.currentReferenceFilePath = null;
 	}
 }
 
@@ -67,144 +78,195 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const diffCalculator = new DiffCalculator();
 
-	// The main diff runner
-	async function runDiff(chosenGroupName?: DiffGroup) {
-		projectDiffView.setLoading(true);
-		try {
-			const editor = vscode.window.activeTextEditor;
-			if (!editor) {
-				vscode.window.showErrorMessage("No active editor found.");
-				projectDiffView.refresh({
-					filePath: null,
-					results: [],
-					matchingGroup: null,
-				});
-				diffState.clearState();
-				projectDiffView.setLoading(false);
-				return;
-			}
-
-			const currentFilePath = editor.document.fileName;
-			const diffGroups: DiffGroup[] =
-				workspaceConfig.get<DiffGroup[]>("diffGroups") || [];
-
-			// Attempt to find which group the file belongs to
-			let matchingGroup: DiffGroup | undefined;
-			let matchingProject: Project | undefined;
-			if (chosenGroupName) {
-				matchingGroup = chosenGroupName;
-			} else {
-				const normFilePath = currentFilePath.toLowerCase().replace(/\\/g, "/");
-
-				for (const group of diffGroups) {
-					for (const workspace of group.workspaces) {
-						const normWorkspacePath = workspace.path
-							.toLowerCase()
-							.replace(/\\/g, "/");
-						if (normFilePath.startsWith(normWorkspacePath)) {
-							matchingGroup = group;
-							matchingProject = workspace;
-							break;
-						}
-					}
-					if (matchingGroup) break;
-				}
-			}
-
-			// If we didn't find any group, prompt user to pick from available
-			if (!matchingGroup) {
-				if (diffGroups.length === 0) {
-					vscode.window.showWarningMessage(
-						"No matching group for current file."
-					);
-				}
-
-				const state = {
-					filePath: currentFilePath,
-					results: [],
-					matchingProject: { name: "", path: "" },
-					matchingGroup: null,
-				};
-				projectDiffView.refresh(state);
-				diffState.setCurrentState(state);
-				projectDiffView.setLoading(false);
-				return;
-			}
-
-			// We have a matching group
-			// Derive a relative path for the file
-			const relativePath: string = path.relative(
-				matchingProject?.path || "",
-				currentFilePath
-			);
-
-			// Do the comparisons
-			const results: DiffResult[] = [];
-			for (const workspaces of matchingGroup.workspaces) {
-				const diffResult = diffCalculator.compareFile({
-					currentFilePath,
-					compareWorkspaceFilePath: workspaces.path,
-					compareRelativeFilePath: relativePath,
-					compareWorkspaceName: workspaces.name,
-					ignoreWhiteSpace: matchingGroup.ignoreWhiteSpace,
-				});
-				results.push(diffResult);
-			}
-
-			// Sort results by ascending diff line count
-			results.sort((a, b) => a.diffLineCount - b.diffLineCount);
-
-			// File missing at the end
-			results.sort((a, b) =>
-				a.fileExists === b.fileExists ? 0 : a.fileExists ? -1 : 1
-			);
-
-			const isCaseSensitiveFileSystem =
-				process.platform !== "win32" && process.platform !== "darwin";
-
-			// Remove the current file from the results
-			const currentResults = results.filter((r) => {
-				if (isCaseSensitiveFileSystem) {
-					return r.compareFilePath !== currentFilePath;
-				} else {
-					return (
-						r.compareFilePath.toLowerCase() !== currentFilePath.toLowerCase()
-					);
-				}
-			});
-
-			const state = {
-				filePath: currentFilePath,
-				results: currentResults,
-				matchingGroup,
-				matchingProject,
-			};
-
-			projectDiffView.refresh(state);
-			diffState.setCurrentState(state);
-		} catch (error) {
-			// Handle any errors
-			console.error(error);
-			vscode.window.showErrorMessage(
-				"An error occurred while processing the diff."
-			);
+// The main diff runner - now accepts optional reference file path
+async function runDiff(chosenGroupName?: DiffGroup, referenceFilePath?: string) {
+	projectDiffView.setLoading(true);
+	try {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) {
+			vscode.window.showErrorMessage("No active editor found.");
 			projectDiffView.refresh({
 				filePath: null,
 				results: [],
 				matchingGroup: null,
+				referenceFilePath: null,
 			});
+			diffState.clearState();
+			projectDiffView.setLoading(false);
+			return;
 		}
-		projectDiffView.setLoading(false);
+
+		const currentFilePath = editor.document.fileName;
+		const diffGroups: DiffGroup[] =
+			workspaceConfig.get<DiffGroup[]>("diffGroups") || [];
+
+		// Use provided reference file path or current active file
+		const effectiveReferenceFilePath = referenceFilePath || currentFilePath;
+		
+		// Attempt to find which group the reference file belongs to
+		let matchingGroup: DiffGroup | undefined;
+		let matchingProject: Project | undefined;
+		
+		if (chosenGroupName) {
+			matchingGroup = chosenGroupName;
+			// Still need to find the matching project for the reference file
+			const normFilePath = effectiveReferenceFilePath.toLowerCase().replace(/\\/g, "/");
+			for (const workspace of matchingGroup.workspaces) {
+				const normWorkspacePath = workspace.path
+					.toLowerCase()
+					.replace(/\\/g, "/");
+				if (normFilePath.startsWith(normWorkspacePath)) {
+					matchingProject = workspace;
+					break;
+				}
+			}
+		} else {
+			const normFilePath = effectiveReferenceFilePath.toLowerCase().replace(/\\/g, "/");
+
+			for (const group of diffGroups) {
+				for (const workspace of group.workspaces) {
+					const normWorkspacePath = workspace.path
+						.toLowerCase()
+						.replace(/\\/g, "/");
+					if (normFilePath.startsWith(normWorkspacePath)) {
+						matchingGroup = group;
+						matchingProject = workspace;
+						break;
+					}
+				}
+				if (matchingGroup) break;
+			}
+		}
+
+		// If we didn't find any group, prompt user to pick from available
+		if (!matchingGroup) {
+			if (diffGroups.length === 0) {
+				vscode.window.showWarningMessage(
+					"No matching group for current file."
+				);
+			}
+
+			const state = {
+				filePath: currentFilePath,
+				results: [],
+				matchingProject: { name: "", path: "" },
+				matchingGroup: null,
+				referenceFilePath: effectiveReferenceFilePath,
+			};
+			projectDiffView.refresh(state);
+			diffState.setCurrentState(state);
+			projectDiffView.setLoading(false);
+			return;
+		}
+
+		// We have a matching group
+		// Derive a relative path for the reference file
+		const relativePath: string = path.relative(
+			matchingProject?.path || "",
+			effectiveReferenceFilePath
+		);
+
+		// Do the comparisons
+		const results: DiffResult[] = [];
+		for (const workspaces of matchingGroup.workspaces) {
+			const diffResult = diffCalculator.compareFile({
+				currentFilePath: effectiveReferenceFilePath,
+				compareWorkspaceFilePath: workspaces.path,
+				compareRelativeFilePath: relativePath,
+				compareWorkspaceName: workspaces.name,
+				ignoreWhiteSpace: matchingGroup.ignoreWhiteSpace,
+			});
+			results.push(diffResult);
+		}
+
+		// Sort results by ascending diff line count
+		results.sort((a, b) => a.diffLineCount - b.diffLineCount);
+
+		// File missing at the end
+		results.sort((a, b) =>
+			a.fileExists === b.fileExists ? 0 : a.fileExists ? -1 : 1
+		);
+
+		const isCaseSensitiveFileSystem =
+			process.platform !== "win32" && process.platform !== "darwin";
+
+		// Remove the reference file from the results
+		const currentResults = results.filter((r) => {
+			if (isCaseSensitiveFileSystem) {
+				return r.compareFilePath !== effectiveReferenceFilePath;
+			} else {
+				return (
+					r.compareFilePath.toLowerCase() !== effectiveReferenceFilePath.toLowerCase()
+				);
+			}
+		});
+
+		const state = {
+			filePath: currentFilePath,
+			results: currentResults,
+			matchingGroup,
+			matchingProject,
+			referenceFilePath: effectiveReferenceFilePath,
+		};
+
+		projectDiffView.refresh(state);
+		diffState.setCurrentState(state);
+	} catch (error) {
+		// Handle any errors
+		console.error(error);
+		vscode.window.showErrorMessage(
+			"An error occurred while processing the diff."
+		);
+		projectDiffView.refresh({
+			filePath: null,
+			results: [],
+			matchingGroup: null,
+			referenceFilePath: null,
+		});
+	}
+	projectDiffView.setLoading(false);
 	}
 
-	// Command: Refresh Diff
+	// Command: Refresh Diff (only refreshes against current reference)
 	const refreshDiffCmd = vscode.commands.registerCommand(
 		"multiProjectsDiff.refreshDiff",
 		async () => {
-			await runDiff();
+			const state = diffState.getCurrentState();
+			await runDiff(state.matchingGroup || undefined, state.referenceFilePath || undefined);
 		}
 	);
 	context.subscriptions.push(refreshDiffCmd);
+
+	// Command: Set Active File as Reference
+	const setActiveAsReferenceCmd = vscode.commands.registerCommand(
+		"multiProjectsDiff.setActiveAsReference",
+		async () => {
+			const editor = vscode.window.activeTextEditor;
+			if (!editor) {
+				vscode.window.showErrorMessage("No active editor found.");
+				return;
+			}
+			await runDiff(undefined, editor.document.fileName);
+		}
+	);
+	context.subscriptions.push(setActiveAsReferenceCmd);
+
+	// Command: Set Reference File
+	const setReferenceFileCmd = vscode.commands.registerCommand(
+		"multiProjectsDiff.setReferenceFile",
+		async (item: DiffItem) => {
+			if (!item.diff.fileExists) {
+				vscode.window.showErrorMessage(
+					`Cannot set missing file as reference: ${item.diff.projectName}`
+				);
+				return;
+			}
+
+			const state = diffState.getCurrentState();
+			await runDiff(state.matchingGroup || undefined, item.diff.compareFilePath);
+		}
+	);
+	context.subscriptions.push(setReferenceFileCmd);
 
 	// Command: Open Split-Screen Diff
 	const openDiffCmd = vscode.commands.registerCommand(
@@ -218,19 +280,22 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 
 			const state = diffState.getCurrentState();
-			if (!state.filePath) {
-				vscode.window.showErrorMessage("No active comparison available.");
+			if (!state.referenceFilePath) {
+				vscode.window.showErrorMessage("No reference file available.");
 				return;
 			}
 
-			const leftUri = vscode.Uri.file(state.filePath);
+			const leftUri = vscode.Uri.file(state.referenceFilePath);
 			const rightUri = vscode.Uri.file(diffResult.compareFilePath);
+
+			// Get the project name for the reference file
+			const referenceProjectName = state.matchingProject?.name || "Reference";
 
 			await vscode.commands.executeCommand(
 				"vscode.diff",
 				leftUri,
 				rightUri,
-				`Diff: ${state.matchingProject?.name} ↔ ${
+				`Diff: ${referenceProjectName} ↔ ${
 					diffResult.projectName
 				} (${path.basename(leftUri.fsPath)})`
 			);
@@ -242,19 +307,21 @@ export function activate(context: vscode.ExtensionContext) {
 	const createAndCopyCmd = vscode.commands.registerCommand(
 		"multiProjectsDiff.createAndCopyFile",
 		async (item: DiffItem) => {
-			const editor = diffState.getCurrentState().filePath;
-			if (!editor) {
+			const state = diffState.getCurrentState();
+			const referenceFilePath = state.referenceFilePath;
+			
+			if (!referenceFilePath) {
 				vscode.window.showErrorMessage(
-					"No active editor to copy content from."
+					"No reference file available to copy content from."
 				);
 				return;
 			}
 
-			const sourcePath = diffState.getCurrentState().filePath;
+			const sourcePath = referenceFilePath;
 			const targetPath = item.diff.compareFilePath;
 
-			if (sourcePath && !fs.existsSync(sourcePath)) {
-				vscode.window.showErrorMessage("Source file does not exist.");
+			if (!fs.existsSync(sourcePath)) {
+				vscode.window.showErrorMessage("Reference file does not exist.");
 				return;
 			}
 
@@ -263,7 +330,7 @@ export function activate(context: vscode.ExtensionContext) {
 				if (!fs.existsSync(targetDir)) {
 					fs.mkdirSync(targetDir, { recursive: true });
 				}
-				fs.copyFileSync(sourcePath as string, targetPath);
+				fs.copyFileSync(sourcePath, targetPath);
 				vscode.window.showInformationMessage(
 					`File created and content copied to: ${targetPath}`
 				);
@@ -330,6 +397,7 @@ export function activate(context: vscode.ExtensionContext) {
 					filePath: state.filePath,
 					results: [],
 					matchingGroup: null,
+					referenceFilePath: state.referenceFilePath,
 				});
 				return;
 			}
@@ -342,10 +410,11 @@ export function activate(context: vscode.ExtensionContext) {
 					filePath: state.filePath,
 					results: [],
 					matchingGroup: null,
+					referenceFilePath: state.referenceFilePath,
 				});
 				return;
 			}
-			runDiff(matchingGroup);
+			runDiff(matchingGroup, state.referenceFilePath || undefined);
 		}
 	);
 	context.subscriptions.push(pickGroupCmd);
@@ -354,16 +423,22 @@ export function activate(context: vscode.ExtensionContext) {
 	const copyContentCmd = vscode.commands.registerCommand(
 		"multiProjectsDiff.copyContent",
 		async (item: DiffItem) => {
-			const sourcePath = diffState.getCurrentState().filePath;
+			const state = diffState.getCurrentState();
+			const sourcePath = state.referenceFilePath;
 			const targetPath = item.diff.compareFilePath;
 
-			if (sourcePath && !fs.existsSync(sourcePath)) {
-				vscode.window.showErrorMessage("Source file does not exist.");
+			if (!sourcePath) {
+				vscode.window.showErrorMessage("No reference file available to copy content from.");
+				return;
+			}
+
+			if (!fs.existsSync(sourcePath)) {
+				vscode.window.showErrorMessage("Reference file does not exist.");
 				return;
 			}
 
 			try {
-				fs.copyFileSync(sourcePath as string, targetPath);
+				fs.copyFileSync(sourcePath, targetPath);
 				vscode.window.showInformationMessage(
 					`Content copied to: ${targetPath}`
 				);

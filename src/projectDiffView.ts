@@ -7,7 +7,7 @@ import { Project, MatchingGroup } from "./extension";
  * A single entry in our "Multi Projects Diff" tree.
  */
 export class DiffItem extends vscode.TreeItem {
-	constructor(public diff: DiffResult) {
+	constructor(public diff: DiffResult, private isReferenceFile: boolean = false) {
 		// Label: [Project Name] ([Added]/[Removed])
 		super(
 			`${diff.projectName} (${diff.diffDetail.added.length}/${diff.diffDetail.removed.length})`,
@@ -50,16 +50,26 @@ export class DiffItem extends vscode.TreeItem {
  * Special tree item at the top that shows the currently compared file and offers a "Refresh" button.
  */
 export class TopDiffItem extends vscode.TreeItem {
-	constructor(filePath: string = "", matchingProject?: Project) {
+	constructor(filePath: string = "", matchingProject?: Project, referenceFilePath?: string) {
 		// Show the filename as the label
-		super(
-			`${matchingProject?.name ?? ""} ${
-				path.basename(filePath) ? "[ " + path.basename(filePath) + " ]" : ""
-			}`
-		);
+		const fileName = path.basename(filePath);
+		const referenceFileName = referenceFilePath ? path.basename(referenceFilePath) : "";
+		
+		let label = "";
+		if (matchingProject?.name) {
+			label = `${matchingProject.name}`;
+		}
+		
+		if (fileName) {
+			label += ` [ ${fileName} ]`;
+		}
 
-		// Show the folder in description
-		if (filePath) {
+		super(label);
+
+		// Show reference file info in description if different from current file
+		if (referenceFilePath && referenceFilePath !== filePath) {
+			this.description = path.dirname(referenceFilePath);
+		} else if (filePath) {
 			this.description = path.dirname(filePath);
 		} else {
 			this.description = "No active editor found - Click to refresh";
@@ -74,7 +84,7 @@ export class TopDiffItem extends vscode.TreeItem {
 
 		// Use a refresh icon
 		this.iconPath = new vscode.ThemeIcon("refresh");
-		this.tooltip = "Click to refresh the diff";
+		this.tooltip = "Click to refresh the diff against current reference file";
 
 		// No collapsible children
 		this.collapsibleState = vscode.TreeItemCollapsibleState.None;
@@ -93,6 +103,9 @@ export class TopGroupItem extends vscode.TreeItem {
 		if (filePath && !matchingProject?.name) {
 			this.contextValue = "multiProjectsDiff.noValidGroup";
 			this.description = "File is not in a diff group";
+		} else {
+			this.contextValue = "multiProjectsDiff.validGroup";
+			this.description = "Click 'Use Active File' button to set active file as reference";
 		}
 
 		this.iconPath = new vscode.ThemeIcon("group-by-ref-type");
@@ -117,6 +130,7 @@ export class ProjectDiffView
 	private currentResults: DiffResult[] = [];
 	private matchingProject: Project | undefined;
 	private matchingGroup: MatchingGroup;
+	private referenceFilePath: string | null = null;
 	private isLoading: boolean = false;
 
 	public setLoading(loading: boolean): void {
@@ -129,11 +143,13 @@ export class ProjectDiffView
 		results,
 		matchingProject,
 		matchingGroup,
+		referenceFilePath,
 	}: {
 		filePath: string | null;
 		results: DiffResult[];
 		matchingProject?: Project;
 		matchingGroup: MatchingGroup;
+		referenceFilePath?: string | null;
 	}): void {
 		this.currentFilePath = filePath;
 		this.currentResults = results;
@@ -142,6 +158,9 @@ export class ProjectDiffView
 		}
 		if (matchingGroup !== undefined) {
 			this.matchingGroup = matchingGroup;
+		}
+		if (referenceFilePath !== undefined) {
+			this.referenceFilePath = referenceFilePath;
 		}
 		this._onDidChangeTreeData.fire();
 	}
@@ -164,7 +183,8 @@ export class ProjectDiffView
 		// Create a top item for the "Refresh" button
 		const topItem = new TopDiffItem(
 			this.currentFilePath ?? "",
-			this.matchingProject
+			this.matchingProject,
+			this.referenceFilePath ?? undefined
 		);
 
 		// If no current file open or no results, show refresh icon only
@@ -173,7 +193,14 @@ export class ProjectDiffView
 		}
 
 		// Create DiffItem for each result
-		const items = this.currentResults.map((res) => new DiffItem(res));
+		// Mark items that match the reference file
+		const items = this.currentResults.map((res) => {
+			const isReference = this.referenceFilePath !== null && 
+				(res.compareFilePath.toLowerCase() === this.referenceFilePath.toLowerCase() ||
+				 res.compareFilePath === this.referenceFilePath);
+			return new DiffItem(res, isReference);
+		});
+		
 		return [topGroupItem, topItem, ...items];
 	}
 }
