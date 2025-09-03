@@ -51,26 +51,24 @@ export class DiffItem extends vscode.TreeItem {
  */
 export class TopDiffItem extends vscode.TreeItem {
 	constructor(filePath: string = "", matchingProject?: Project, referenceFilePath?: string) {
-		// Show the filename as the label
-		const fileName = path.basename(filePath);
-		const referenceFileName = referenceFilePath ? path.basename(referenceFilePath) : "";
-		
+		// Prefer showing the reference file if available; otherwise fallback to current file
+		const displayPath = referenceFilePath || filePath || "";
+		const fileName = displayPath ? path.basename(displayPath) : "";
+
 		let label = "";
 		if (matchingProject?.name) {
 			label = `${matchingProject.name}`;
 		}
-		
+
 		if (fileName) {
 			label += ` [ ${fileName} ]`;
 		}
 
 		super(label);
 
-		// Show reference file info in description if different from current file
-		if (referenceFilePath && referenceFilePath !== filePath) {
-			this.description = path.dirname(referenceFilePath);
-		} else if (filePath) {
-			this.description = path.dirname(filePath);
+		// Show the folder of the displayed path, or guidance if nothing to show
+		if (displayPath) {
+			this.description = path.dirname(displayPath);
 		} else {
 			this.description = "No active editor found - Click to refresh";
 		}

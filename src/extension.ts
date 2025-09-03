@@ -100,8 +100,12 @@ async function runDiff(chosenGroupName?: DiffGroup, referenceFilePath?: string) 
 		const diffGroups: DiffGroup[] =
 			workspaceConfig.get<DiffGroup[]>("diffGroups") || [];
 
-		// Use provided reference file path or current active file
-		const effectiveReferenceFilePath = referenceFilePath || currentFilePath;
+		// Effective reference file path:
+		// 1. Provided referenceFilePath
+		// 2. Previous reference (if any)
+		// 3. Current file (if no previous reference)
+		const previousRef = diffState.getCurrentState().referenceFilePath ?? undefined;
+		const effectiveReferenceFilePath = referenceFilePath ?? previousRef ?? currentFilePath;
 		
 		// Attempt to find which group the reference file belongs to
 		let matchingGroup: DiffGroup | undefined;
