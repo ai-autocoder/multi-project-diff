@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import { promises as fsp } from "fs";
 import * as path from "path";
 import { diffLines } from "diff";
 
@@ -29,7 +30,7 @@ export interface DiffParams {
  * ignoring whitespace if requested.
  */
 export class DiffCalculator {
-	public compareFile(params: DiffParams): DiffResult {
+	public async compareFile(params: DiffParams): Promise<DiffResult> {
 		const {
 			currentFilePath,
 			compareWorkspaceFilePath,
@@ -44,8 +45,8 @@ export class DiffCalculator {
 			compareRelativeFilePath
 		);
 
-		const baseExists = fs.existsSync(currentFilePath);
-		const compareExists = fs.existsSync(resolvedCompareFilePath);
+		const baseExists = await fileExists(currentFilePath);
+		const compareExists = await fileExists(resolvedCompareFilePath);
 
 		if (!baseExists) {
 			return {
@@ -70,8 +71,10 @@ export class DiffCalculator {
 		}
 
 		// Read file contents
-		const baseContent = fs.readFileSync(currentFilePath, "utf8");
-		const compareContent = fs.readFileSync(resolvedCompareFilePath, "utf8");
+		const [baseContent, compareContent] = await Promise.all([
+			fsp.readFile(currentFilePath, "utf8"),
+			fsp.readFile(resolvedCompareFilePath, "utf8"),
+		]);
 
 		// Perform the diff
 		const diffChunks = diffLines(baseContent, compareContent, {
@@ -88,6 +91,15 @@ export class DiffCalculator {
 			} else if (chunk.removed) {
 				diffLineCount += chunk.count ?? 0;
 				removedLines.push(...chunk.value.split("\n").filter(Boolean));
+			}
+		}
+
+		async function fileExists(p: string): Promise<boolean> {
+			try {
+				await fsp.access(p);
+				return true;
+			} catch {
+				return false;
 			}
 		}
 

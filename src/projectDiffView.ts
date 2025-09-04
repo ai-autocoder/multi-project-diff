@@ -7,7 +7,10 @@ import { Project, MatchingGroup } from "./extension";
  * A single entry in our "Multi Projects Diff" tree.
  */
 export class DiffItem extends vscode.TreeItem {
-	constructor(public diff: DiffResult, private isReferenceFile: boolean = false) {
+	constructor(
+		public diff: DiffResult,
+		private isReferenceFile: boolean = false
+	) {
 		// Label: [Project Name] ([Added]/[Removed])
 		super(
 			`${diff.projectName} (${diff.diffDetail.added.length}/${diff.diffDetail.removed.length})`,
@@ -50,7 +53,11 @@ export class DiffItem extends vscode.TreeItem {
  * Special tree item at the top that shows the currently compared file and offers a "Refresh" button.
  */
 export class TopDiffItem extends vscode.TreeItem {
-	constructor(filePath: string = "", matchingProject?: Project, referenceFilePath?: string) {
+	constructor(
+		filePath: string = "",
+		matchingProject?: Project,
+		referenceFilePath?: string
+	) {
 		// Prefer showing the reference file if available; otherwise fallback to current file
 		const displayPath = referenceFilePath || filePath || "";
 		const fileName = displayPath ? path.basename(displayPath) : "";
@@ -103,7 +110,8 @@ export class TopGroupItem extends vscode.TreeItem {
 			this.description = "File is not in a diff group";
 		} else {
 			this.contextValue = "multiProjectsDiff.validGroup";
-			this.description = "Click 'Use Active File' button to set active file as reference";
+			this.description =
+				"Click 'Use Active File' button to set active file as reference";
 		}
 
 		this.iconPath = new vscode.ThemeIcon("group-by-ref-type");
@@ -129,12 +137,6 @@ export class ProjectDiffView
 	private matchingProject: Project | undefined;
 	private matchingGroup: MatchingGroup;
 	private referenceFilePath: string | null = null;
-	private isLoading: boolean = false;
-
-	public setLoading(loading: boolean): void {
-		this.isLoading = loading;
-		this._onDidChangeTreeData.fire();
-	}
 
 	public refresh({
 		filePath,
@@ -168,10 +170,6 @@ export class ProjectDiffView
 	}
 
 	getChildren(): vscode.TreeItem[] {
-		if (this.isLoading) {
-			return [new LoadingItem()];
-		}
-
 		const topGroupItem = new TopGroupItem(
 			this.matchingGroup,
 			this.currentFilePath ?? "",
@@ -193,20 +191,14 @@ export class ProjectDiffView
 		// Create DiffItem for each result
 		// Mark items that match the reference file
 		const items = this.currentResults.map((res) => {
-			const isReference = this.referenceFilePath !== null && 
-				(res.compareFilePath.toLowerCase() === this.referenceFilePath.toLowerCase() ||
-				 res.compareFilePath === this.referenceFilePath);
+			const isReference =
+				this.referenceFilePath !== null &&
+				(res.compareFilePath.toLowerCase() ===
+					this.referenceFilePath.toLowerCase() ||
+					res.compareFilePath === this.referenceFilePath);
 			return new DiffItem(res, isReference);
 		});
-		
-		return [topGroupItem, topItem, ...items];
-	}
-}
 
-export class LoadingItem extends vscode.TreeItem {
-	constructor() {
-		super("Processing...");
-		this.iconPath = new vscode.ThemeIcon("loading~spin");
-		this.collapsibleState = vscode.TreeItemCollapsibleState.None;
+		return [topGroupItem, topItem, ...items];
 	}
 }
