@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import { DiffResult } from "./diffCalculator";
+import { DiffResult } from "./types";
 import { Project, MatchingGroup } from "./extension";
 
 /**

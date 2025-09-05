@@ -1,8 +1,10 @@
 import * as vscode from "vscode";
 import * as path from "path";
+import * as os from "os";
 import * as fs from "fs";
-import { DiffCalculator, DiffResult } from "./diffCalculator";
+import { DiffResult } from "./types";
 import { DiffItem, ProjectDiffView, TopDiffItem } from "./projectDiffView";
+import { WorkerPool } from "./workerPool";
 
 export interface DiffGroup {
 	name: string;
@@ -76,7 +78,6 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(treeView);
 
-	const diffCalculator = new DiffCalculator();
 
 	// The main diff runner - now accepts optional reference file path
 	async function runDiff(
@@ -192,16 +193,15 @@ export function activate(context: vscode.ExtensionContext) {
 					const diffWeight = 90;
 					const perItemInc = total > 0 ? diffWeight / total : diffWeight;
 
-					// Concurrency limit
-					const limit = Math.min(4, total);
-					let i = 0;
-
-					const worker = async () => {
-						while (!token.isCancellationRequested) {
-							const idx = i++;
-							if (idx >= total) break;
-							const ws = workspaces[idx];
-							const res = await diffCalculator.compareFile({
+					const workerPath = path.join(__dirname, "diffWorker.js");
+					const poolSize = Math.min(Math.max(1, os.cpus().length - 1), Math.max(1, Math.min(6, total)));
+					const pool = new WorkerPool<any, DiffResult>(workerPath, poolSize);
+					try {
+						const tasks = workspaces.map(async (ws, idx) => {
+							if (token.isCancellationRequested) {
+								return undefined as unknown as DiffResult;
+							}
+							const res = await pool.run({
 								currentFilePath: effectiveReferenceFilePath,
 								compareWorkspaceFilePath: ws.path,
 								compareRelativeFilePath: relativePath,
@@ -211,11 +211,12 @@ export function activate(context: vscode.ExtensionContext) {
 							out[idx] = res;
 							completed += 1;
 							progress.report({ increment: perItemInc, message: `Compared ${ws.name}` });
-						}
-					};
-
-					const runners = Array.from({ length: Math.max(1, limit) }, () => worker());
-					await Promise.all(runners);
+							return res;
+						});
+						await Promise.allSettled(tasks);
+					} finally {
+						await pool.close();
+					}
 
 					if (token.isCancellationRequested) {
 						return out.filter(Boolean) as DiffResult[];
