@@ -188,6 +188,10 @@ export function activate(context: vscode.ExtensionContext) {
 					const out: DiffResult[] = new Array(total);
 					let completed = 0;
 
+					// Progress weighting: 90% for diffing, 10% for post-processing
+					const diffWeight = 90;
+					const perItemInc = total > 0 ? diffWeight / total : diffWeight;
+
 					// Concurrency limit
 					const limit = Math.min(4, total);
 					let i = 0;
@@ -206,42 +210,40 @@ export function activate(context: vscode.ExtensionContext) {
 							});
 							out[idx] = res;
 							completed += 1;
-							progress.report({ increment: (completed / total) * 100 });
+							progress.report({ increment: perItemInc, message: `Compared ${ws.name}` });
 						}
 					};
 
-					const runners = Array.from({ length: limit }, () => worker());
+					const runners = Array.from({ length: Math.max(1, limit) }, () => worker());
 					await Promise.all(runners);
-					return out.filter(Boolean) as DiffResult[];
+
+					if (token.isCancellationRequested) {
+						return out.filter(Boolean) as DiffResult[];
+					}
+
+					// Post-processing: sort and filter before returning
+					progress.report({ message: "Sorting and filtering…" });
+					let results = (out.filter(Boolean) as DiffResult[]);
+					results.sort((a, b) => a.diffLineCount - b.diffLineCount);
+					results.sort((a, b) => (a.fileExists === b.fileExists ? 0 : a.fileExists ? -1 : 1));
+
+					const isCaseSensitiveFileSystem = process.platform !== "win32" && process.platform !== "darwin";
+					results = results.filter((r) => {
+						if (isCaseSensitiveFileSystem) {
+							return r.compareFilePath !== effectiveReferenceFilePath;
+						} else {
+							return r.compareFilePath.toLowerCase() !== effectiveReferenceFilePath.toLowerCase();
+						}
+					});
+
+					progress.report({ increment: 100 - Math.min(100, completed * perItemInc), message: "Finalizing…" });
+					return results;
 				}
 			);
-
-			// Sort results by ascending diff line count
-			results.sort((a, b) => a.diffLineCount - b.diffLineCount);
-
-			// File missing at the end
-			results.sort((a, b) =>
-				a.fileExists === b.fileExists ? 0 : a.fileExists ? -1 : 1
-			);
-
-			const isCaseSensitiveFileSystem =
-				process.platform !== "win32" && process.platform !== "darwin";
-
-			// Remove the reference file from the results
-			const currentResults = results.filter((r) => {
-				if (isCaseSensitiveFileSystem) {
-					return r.compareFilePath !== effectiveReferenceFilePath;
-				} else {
-					return (
-						r.compareFilePath.toLowerCase() !==
-						effectiveReferenceFilePath.toLowerCase()
-					);
-				}
-			});
 
 			const state = {
 				filePath: currentFilePath,
-				results: currentResults,
+				results: results,
 				matchingGroup,
 				matchingProject,
 				referenceFilePath: effectiveReferenceFilePath,
