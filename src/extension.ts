@@ -176,32 +176,43 @@ export function activate(context: vscode.ExtensionContext) {
 				effectiveReferenceFilePath
 			);
 
-			// Do the comparisons with a view-scoped progress indicator
+			// Do the comparisons with a view-scoped progress indicator (concurrency-limited)
 			const results: DiffResult[] = await vscode.window.withProgress(
 				{
 					location: { viewId: "multiProjectsDiffView" },
 					title: "Loading diffs...",
 				},
 				async (progress, token) => {
-					const partial: DiffResult[] = [];
-					const total = matchingGroup!.workspaces.length;
+					const workspaces = matchingGroup!.workspaces;
+					const total = workspaces.length;
+					const out: DiffResult[] = new Array(total);
 					let completed = 0;
-					for (const workspaces of matchingGroup!.workspaces) {
-						if (token.isCancellationRequested) {
-							break;
+
+					// Concurrency limit
+					const limit = Math.min(4, total);
+					let i = 0;
+
+					const worker = async () => {
+						while (!token.isCancellationRequested) {
+							const idx = i++;
+							if (idx >= total) break;
+							const ws = workspaces[idx];
+							const res = await diffCalculator.compareFile({
+								currentFilePath: effectiveReferenceFilePath,
+								compareWorkspaceFilePath: ws.path,
+								compareRelativeFilePath: relativePath,
+								compareWorkspaceName: ws.name,
+								ignoreWhiteSpace: matchingGroup!.ignoreWhiteSpace,
+							});
+							out[idx] = res;
+							completed += 1;
+							progress.report({ increment: (completed / total) * 100 });
 						}
-						const diffResult = await diffCalculator.compareFile({
-							currentFilePath: effectiveReferenceFilePath,
-							compareWorkspaceFilePath: workspaces.path,
-							compareRelativeFilePath: relativePath,
-							compareWorkspaceName: workspaces.name,
-							ignoreWhiteSpace: matchingGroup!.ignoreWhiteSpace,
-						});
-						partial.push(diffResult);
-						completed += 1;
-						progress.report({ increment: (completed / total) * 100 });
-					}
-					return partial;
+					};
+
+					const runners = Array.from({ length: limit }, () => worker());
+					await Promise.all(runners);
+					return out.filter(Boolean) as DiffResult[];
 				}
 			);
 
