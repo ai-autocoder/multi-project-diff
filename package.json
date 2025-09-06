@@ -49,6 +49,16 @@
                 "icon": "$(refresh)"
             },
             {
+                "command": "multiProjectsDiff.enableWatch",
+                "title": "Start Watching",
+                "icon": "$(eye)"
+            },
+            {
+                "command": "multiProjectsDiff.disableWatch",
+                "title": "Stop Watching",
+                "icon": "$(eye-closed)"
+            },
+            {
                 "command": "multiProjectsDiff.setActiveAsReference",
                 "title": "Use Active File as Reference",
                 "icon": "$(target)"
@@ -96,9 +106,19 @@
         "menus": {
             "view/title": [
                 {
+                    "command": "multiProjectsDiff.enableWatch",
+                    "when": "view == multiProjectsDiffView && !multiProjectsDiff.watchEnabled",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "multiProjectsDiff.disableWatch",
+                    "when": "view == multiProjectsDiffView && multiProjectsDiff.watchEnabled",
+                    "group": "navigation@1"
+                },
+                {
                     "command": "multiProjectsDiff.setActiveAsReference",
                     "when": "view == multiProjectsDiffView",
-                    "group": "navigation"
+                    "group": "navigation@2"
                 }
             ],
             "view/item/context": [

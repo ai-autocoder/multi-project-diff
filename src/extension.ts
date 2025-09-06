@@ -72,6 +72,14 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.workspace.getConfiguration("multiProjectsDiff");
 	const diffState = new DiffState();
 
+	// Watch toggle state and context key for menus
+	let watchEnabled = false;
+	vscode.commands.executeCommand(
+		"setContext",
+		"multiProjectsDiff.watchEnabled",
+		watchEnabled
+	);
+
 	// Create and register the TreeView
 	const treeView = vscode.window.createTreeView("multiProjectsDiffView", {
 		treeDataProvider: projectDiffView,
@@ -274,6 +282,47 @@ export function activate(context: vscode.ExtensionContext) {
 			});
 		}
 	}
+
+	// Watch toggle commands
+	const enableWatchCmd = vscode.commands.registerCommand(
+		"multiProjectsDiff.enableWatch",
+		async () => {
+			watchEnabled = true;
+			await vscode.commands.executeCommand(
+				"setContext",
+				"multiProjectsDiff.watchEnabled",
+				true
+			);
+			vscode.window.setStatusBarMessage("Multi Projects Diff: Watch ON", 2000);
+		}
+	);
+	context.subscriptions.push(enableWatchCmd);
+
+	const disableWatchCmd = vscode.commands.registerCommand(
+		"multiProjectsDiff.disableWatch",
+		async () => {
+			watchEnabled = false;
+			await vscode.commands.executeCommand(
+				"setContext",
+				"multiProjectsDiff.watchEnabled",
+				false
+			);
+			vscode.window.setStatusBarMessage("Multi Projects Diff: Watch OFF", 2000);
+		}
+	);
+	context.subscriptions.push(disableWatchCmd);
+
+	// React to active editor changes when watching is enabled
+	const activeEditorListener = vscode.window.onDidChangeActiveTextEditor(
+		(editor) => {
+			if (!watchEnabled || !editor) return;
+			// Run the existing action to set active file as reference and refresh
+			vscode.commands.executeCommand(
+				"multiProjectsDiff.setActiveAsReference"
+			);
+		}
+	);
+	context.subscriptions.push(activeEditorListener);
 
 	// Command: Refresh Diff (only refreshes against current reference)
 	const refreshDiffCmd = vscode.commands.registerCommand(
