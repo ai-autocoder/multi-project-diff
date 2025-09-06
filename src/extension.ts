@@ -86,6 +86,67 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(treeView);
 
+	// Heuristics for eligibility
+	const MAX_WATCH_FILE_BYTES = 2 * 1024 * 1024; // 2 MB
+	const BINARY_EXTS = new Set([
+		"png","jpg","jpeg","gif","bmp","ico","webp",
+		"mp3","wav","flac","mp4","avi","mov","mkv",
+		"zip","rar","7z","gz","bz2","xz","tar",
+		"exe","dll","so","dylib","pdf"
+	]);
+
+	function isBinaryLike(fsPath: string): boolean {
+		const ext = path.extname(fsPath).toLowerCase().replace(/^\./, "");
+		if (ext && BINARY_EXTS.has(ext)) return true;
+		try {
+			const fd = fs.openSync(fsPath, "r");
+			try {
+				const len = 512;
+				const buf = Buffer.allocUnsafe(len);
+				const bytes = fs.readSync(fd, buf, 0, len, 0);
+				let suspicious = 0;
+				for (let i = 0; i < bytes; i++) {
+					const c = buf[i];
+					if (c === 0) return true; // NUL byte
+					// allow tab/newline/carriage return
+					if (c === 9 || c === 10 || c === 13) continue;
+					// printable ASCII range
+					if (c >= 32 && c <= 126) continue;
+					// allow some UTF-8 bytes (>127) as text; count as suspicious but tolerate up to 30%
+					suspicious++;
+				}
+				if (bytes > 0 && suspicious / bytes > 0.3) return true;
+			} finally {
+				fs.closeSync(fd);
+			}
+		} catch {
+			// If we can't read the file, play safe and treat as binary-like to avoid noisy diffs
+			return true;
+		}
+		return false;
+	}
+
+	function getEligibleActiveFilePath(): string | null {
+		const editor = vscode.window.activeTextEditor;
+		const activeTab = vscode.window.tabGroups.activeTabGroup?.activeTab;
+		if (!editor || !activeTab) return null;
+		if (activeTab.input instanceof vscode.TabInputTextDiff) return null;
+		if (!(activeTab.input instanceof vscode.TabInputText)) return null;
+		const uri = editor.document.uri;
+		if (uri.scheme !== "file") return null;
+		const fsPath = uri.fsPath;
+		if (!fs.existsSync(fsPath)) return null;
+		try {
+			const stat = fs.statSync(fsPath);
+			if (!stat.isFile()) return null;
+			if (stat.size > MAX_WATCH_FILE_BYTES) return null;
+		} catch {
+			return null;
+		}
+		if (isBinaryLike(fsPath)) return null;
+		return fsPath;
+	}
+
 
 	// The main diff runner - now accepts optional reference file path
 	async function runDiff(
@@ -313,15 +374,12 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(disableWatchCmd);
 
 	// React to active editor changes when watching is enabled
-	const activeEditorListener = vscode.window.onDidChangeActiveTextEditor(
-		(editor) => {
-			if (!watchEnabled || !editor) return;
-			// Run the existing action to set active file as reference and refresh
-			vscode.commands.executeCommand(
-				"multiProjectsDiff.setActiveAsReference"
-			);
-		}
-	);
+	const activeEditorListener = vscode.window.onDidChangeActiveTextEditor(() => {
+		if (!watchEnabled) return;
+		const eligiblePath = getEligibleActiveFilePath();
+		if (!eligiblePath) return;
+		vscode.commands.executeCommand("multiProjectsDiff.setActiveAsReference");
+	});
 	context.subscriptions.push(activeEditorListener);
 
 	// Command: Refresh Diff (only refreshes against current reference)
@@ -346,7 +404,14 @@ export function activate(context: vscode.ExtensionContext) {
 				vscode.window.showErrorMessage("No active editor found.");
 				return;
 			}
-			await runDiff(undefined, editor.document.fileName);
+			const eligiblePath = getEligibleActiveFilePath();
+			if (!eligiblePath) {
+				vscode.window.showWarningMessage(
+					"Active tab is not a single file. Open a file tab to set as reference."
+				);
+				return;
+			}
+			await runDiff(undefined, eligiblePath);
 		}
 	);
 	context.subscriptions.push(setActiveAsReferenceCmd);
