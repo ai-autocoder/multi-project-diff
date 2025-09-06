@@ -355,6 +355,13 @@ export function activate(context: vscode.ExtensionContext) {
 				true
 			);
 			vscode.window.setStatusBarMessage("Multi Projects Diff: Watch ON", 2000);
+
+			const eligiblePath = getEligibleActiveFilePath();
+			if (eligiblePath) {
+				await vscode.commands.executeCommand(
+					"multiProjectsDiff.setActiveAsReference"
+				);
+			}
 		}
 	);
 	context.subscriptions.push(enableWatchCmd);
