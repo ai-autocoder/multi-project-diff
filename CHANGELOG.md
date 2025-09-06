@@ -1,5 +1,24 @@
 # Change Log
 
+## [2.0.0]
+
+### New Features
+
+- Watch Mode toggle in the view toolbar to automatically use the active editor file as reference and refresh diffs on focus change.
+- Pin action on each file row to set that file as the reference for comparison.
+- Toolbar action to set the currently active editor file as the reference.
+- Clicking the reference file row re-runs the comparison against the current reference file (no longer resets to the active file).
+
+### Improvements
+
+- Performance: Multicore diffing with worker_threads. Per-workspace diff tasks now run in a worker pool, keeping the extension host responsive and delivering 3-4x speedups on medium/large files across multiple projects.
+- Performance: Add mtime-based LRU diff cache (with reverse lookups) to avoid re-diffing unchanged pairs.
+- Reorganized inline button order for a more consistent experience.
+- Dedicated Activity Bar container with the `arrow-swap` codicon for quicker access.
+- Improved progress indication using VS Code's built-in view-scoped progress bar.
+- Prevent running diffs on ineligible tabs: ignore VS Code diff/non-text/virtual tabs and skip very large (>2MB) or binary-like files; manual action now warns when the active tab isn't a single file.
+- Updated README for new features.
+
 ## [1.2.0]
 
 - Add "Open Terminal" button in diff view
