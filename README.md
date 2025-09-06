@@ -41,6 +41,8 @@ Compare the currently open file in the editor against corresponding files in oth
 
 6. **Group Selection:** If the current file doesn't belong to any defined group, or if you want to compare against a different group, use the "Pick Group" button to choose a specific group for comparison (only available if the file doesn't belong to any group).
 
+7. **Watch Mode:** Toggle Watch (eye icon) in the view toolbar to automatically use the currently active editor file as the reference and refresh the comparison whenever you switch files. Disable it with the eye‑closed icon.
+
 ## How to Use
 
 1.  **Open a file** you want to use for comparison. This becomes the initial reference file the first time you run the diff.
@@ -48,6 +50,7 @@ Compare the currently open file in the editor against corresponding files in oth
 3.  **Change the Reference File (Optional):**
     *   Click **Set as Reference** (pin icon) next to any file in the list to set it as the new reference for all comparisons.
     *   Click **Use Active File as Reference** (target icon) in the toolbar to set the file currently active in your editor as the reference.
+    *   Toggle **Watch** (eye icon) in the toolbar to automatically set the active editor file as the reference whenever you switch editors. Turn it off with the eye-closed icon.
 4.  **Refresh Comparison:** Click **Refresh** (refresh icon) at the top of the view to re-run the diff against the current reference file. Refresh does not change the reference file.
 5.  **View Diffs:** Click on any project item in the list to open a split-screen diff.
 
