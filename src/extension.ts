@@ -196,6 +196,11 @@ export function activate(context: vscode.ExtensionContext) {
 					const workerPath = path.join(__dirname, "diffWorker.js");
 					const poolSize = Math.min(Math.max(1, os.cpus().length - 1), Math.max(1, Math.min(6, total)));
 					const pool = new WorkerPool<any, DiffResult>(workerPath, poolSize);
+					// Read the reference file once to avoid re-reading it in every worker
+					let baseContent: string | undefined = undefined;
+					try {
+						baseContent = await fs.promises.readFile(effectiveReferenceFilePath, "utf8");
+					} catch {}
 					try {
 						const tasks = workspaces.map(async (ws, idx) => {
 							if (token.isCancellationRequested) {
@@ -207,6 +212,7 @@ export function activate(context: vscode.ExtensionContext) {
 								compareRelativeFilePath: relativePath,
 								compareWorkspaceName: ws.name,
 								ignoreWhiteSpace: matchingGroup!.ignoreWhiteSpace,
+								baseContent,
 							});
 							out[idx] = res;
 							completed += 1;
@@ -225,8 +231,10 @@ export function activate(context: vscode.ExtensionContext) {
 					// Post-processing: sort and filter before returning
 					progress.report({ message: "Sorting and filtering…" });
 					let results = (out.filter(Boolean) as DiffResult[]);
-					results.sort((a, b) => a.diffLineCount - b.diffLineCount);
-					results.sort((a, b) => (a.fileExists === b.fileExists ? 0 : a.fileExists ? -1 : 1));
+					results.sort((a, b) => {
+						if (a.fileExists !== b.fileExists) return a.fileExists ? -1 : 1;
+						return a.diffLineCount - b.diffLineCount;
+					});
 
 					const isCaseSensitiveFileSystem = process.platform !== "win32" && process.platform !== "darwin";
 					results = results.filter((r) => {

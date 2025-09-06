@@ -13,13 +13,13 @@ export class DiffItem extends vscode.TreeItem {
 	) {
 		// Label: [Project Name] ([Added]/[Removed])
 		super(
-			`${diff.projectName} (${diff.diffDetail.added.length}/${diff.diffDetail.removed.length})`,
+			`${diff.projectName} (${diff.diffDetail.added}/${diff.diffDetail.removed})`,
 			vscode.TreeItemCollapsibleState.None
 		);
 
 		// Tooltip to provide detailed information
 		this.tooltip = diff.fileExists
-			? `Lines added: ${diff.diffDetail.added.length}, removed: ${diff.diffDetail.removed.length}`
+			? `Lines added: ${diff.diffDetail.added}, removed: ${diff.diffDetail.removed}`
 			: `File not found: ${diff.compareFilePath}`;
 
 		// Description and contextValue for menu commands

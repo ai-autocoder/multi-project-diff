@@ -10,6 +10,7 @@ interface DiffParamsIn {
   compareRelativeFilePath: string;
   compareWorkspaceName: string;
   ignoreWhiteSpace: boolean;
+  baseContent?: string; // optional preloaded content of currentFilePath to avoid repeated reads
 }
 
 async function fileExists(p: string): Promise<boolean> {
@@ -28,6 +29,7 @@ async function compareFile(params: DiffParamsIn): Promise<DiffResult> {
     compareRelativeFilePath,
     compareWorkspaceName,
     ignoreWhiteSpace,
+    baseContent,
   } = params;
 
   const resolvedCompareFilePath = path.join(
@@ -35,14 +37,17 @@ async function compareFile(params: DiffParamsIn): Promise<DiffResult> {
     compareRelativeFilePath
   );
 
-  const baseExists = await fileExists(currentFilePath);
-  const compareExists = await fileExists(resolvedCompareFilePath);
+  const [baseExists, compareExists] = await Promise.all([
+    // If base content provided, treat base as existing
+    baseContent !== undefined ? Promise.resolve(true) : fileExists(currentFilePath),
+    fileExists(resolvedCompareFilePath),
+  ]);
 
   if (!baseExists) {
     return {
       projectName: compareWorkspaceName,
       diffLineCount: 0,
-      diffDetail: { added: [], removed: [] },
+      diffDetail: { added: 0, removed: 0 },
       compareFilePath: resolvedCompareFilePath,
       fileExists: compareExists,
       compareWorkspaceFilePath,
@@ -53,39 +58,53 @@ async function compareFile(params: DiffParamsIn): Promise<DiffResult> {
     return {
       projectName: compareWorkspaceName,
       diffLineCount: 0,
-      diffDetail: { added: [], removed: [] },
+      diffDetail: { added: 0, removed: 0 },
       compareFilePath: resolvedCompareFilePath,
       fileExists: false,
       compareWorkspaceFilePath,
     };
   }
 
-  const [baseContent, compareContent] = await Promise.all([
-    fsp.readFile(currentFilePath, "utf8"),
+  const [baseText, compareText] = await Promise.all([
+    baseContent !== undefined ? Promise.resolve(baseContent) : fsp.readFile(currentFilePath, "utf8"),
     fsp.readFile(resolvedCompareFilePath, "utf8"),
   ]);
 
-  const diffChunks = diffLines(baseContent, compareContent, {
+  // Fast path: exact equality
+  if (baseText === compareText) {
+    return {
+      projectName: compareWorkspaceName,
+      diffLineCount: 0,
+      diffDetail: { added: 0, removed: 0 },
+      compareFilePath: resolvedCompareFilePath,
+      fileExists: true,
+      compareWorkspaceFilePath,
+    };
+  }
+
+  const diffChunks = diffLines(baseText, compareText, {
     ignoreWhitespace: ignoreWhiteSpace,
   });
   let diffLineCount = 0;
-  const addedLines: string[] = [];
-  const removedLines: string[] = [];
+  let addedCount = 0;
+  let removedCount = 0;
 
   for (const chunk of diffChunks) {
     if ((chunk as any).added) {
-      diffLineCount += (chunk as any).count ?? 0;
-      addedLines.push(...(chunk as any).value.split("\n").filter(Boolean));
+      const c = (chunk as any).count ?? 0;
+      diffLineCount += c;
+      addedCount += c;
     } else if ((chunk as any).removed) {
-      diffLineCount += (chunk as any).count ?? 0;
-      removedLines.push(...(chunk as any).value.split("\n").filter(Boolean));
+      const c = (chunk as any).count ?? 0;
+      diffLineCount += c;
+      removedCount += c;
     }
   }
 
   return {
     projectName: compareWorkspaceName,
     diffLineCount,
-    diffDetail: { added: addedLines, removed: removedLines },
+    diffDetail: { added: addedCount, removed: removedCount },
     compareFilePath: resolvedCompareFilePath,
     fileExists: true,
     compareWorkspaceFilePath,
