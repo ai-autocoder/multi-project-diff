@@ -5,6 +5,7 @@ import * as fs from "fs";
 import { DiffResult } from "./types";
 import { DiffItem, ProjectDiffView, TopDiffItem } from "./projectDiffView";
 import { WorkerPool } from "./workerPool";
+import { DiffCache } from "./diffCache";
 
 export interface DiffGroup {
 	name: string;
@@ -71,6 +72,9 @@ export function activate(context: vscode.ExtensionContext) {
 	const workspaceConfig =
 		vscode.workspace.getConfiguration("multiProjectsDiff");
 	const diffState = new DiffState();
+
+	// Cache recent diff results keyed by file paths + mtimes
+	const diffCache = new DiffCache(1000);
 
 	// Track concurrent runs to avoid stale updates and allow cancellation
 	let currentRunId = 0;
@@ -296,6 +300,12 @@ export function activate(context: vscode.ExtensionContext) {
 					try {
 						baseContent = await fs.promises.readFile(effectiveReferenceFilePath, "utf8");
 					} catch {}
+					// Stat the reference file once for cache keying
+					let baseMtimeMs = -1;
+					try {
+						const st = await fs.promises.stat(effectiveReferenceFilePath);
+						baseMtimeMs = st.mtimeMs;
+					} catch {}
 					try {
 						const tasks = workspaces.map(async (ws, idx) => {
 							if (token.isCancellationRequested || (activeRunCts?.token.isCancellationRequested ?? false) || myRunId !== currentRunId) {
@@ -305,6 +315,57 @@ export function activate(context: vscode.ExtensionContext) {
 							if (!p) {
 								return undefined as unknown as DiffResult;
 							}
+							// Resolve compare path for cache and self-compare check
+							const comparePath = path.join(ws.path, relativePath);
+							// Skip self-compare (same file as reference)
+							const isSameFile = (process.platform === "win32" || process.platform === "darwin")
+								? comparePath.toLowerCase() === effectiveReferenceFilePath.toLowerCase()
+								: comparePath === effectiveReferenceFilePath;
+							if (isSameFile) {
+								const zero: DiffResult = {
+									projectName: ws.name,
+									diffLineCount: 0,
+									diffDetail: { added: 0, removed: 0 },
+									compareFilePath: comparePath,
+									fileExists: true,
+									compareWorkspaceFilePath: ws.path,
+								};
+								out[idx] = zero;
+								completed += 1;
+								progress.report({ increment: perItemInc, message: `Skipped ${ws.name}` });
+								return zero;
+							}
+
+							// Compare file mtime for cache keying
+							let compareMtimeMs = -1;
+							try {
+								const st = await fs.promises.stat(comparePath);
+								compareMtimeMs = st.mtimeMs;
+							} catch {}
+
+							// Try cache first
+							const cached = diffCache.get({
+								basePath: effectiveReferenceFilePath,
+								baseMtimeMs,
+								comparePath,
+								compareMtimeMs,
+								ignoreWhitespace: matchingGroup!.ignoreWhiteSpace,
+							});
+							if (cached) {
+								// Adjust project/name/path fields to the current ws
+								const resFromCache: DiffResult = {
+									...cached,
+									projectName: ws.name,
+									compareFilePath: comparePath,
+									compareWorkspaceFilePath: ws.path,
+								};
+								out[idx] = resFromCache;
+								completed += 1;
+								progress.report({ increment: perItemInc, message: `Cached ${ws.name}` });
+								return resFromCache;
+							}
+
+							// Fallback to worker
 							const res = await p.run({
 								currentFilePath: effectiveReferenceFilePath,
 								compareWorkspaceFilePath: ws.path,
@@ -313,6 +374,14 @@ export function activate(context: vscode.ExtensionContext) {
 								ignoreWhiteSpace: matchingGroup!.ignoreWhiteSpace,
 								baseContent,
 							});
+							// Populate cache (even missing files)
+							diffCache.set({
+								basePath: effectiveReferenceFilePath,
+								baseMtimeMs,
+								comparePath,
+								compareMtimeMs,
+								ignoreWhitespace: matchingGroup!.ignoreWhiteSpace,
+							}, res);
 							out[idx] = res;
 							completed += 1;
 							progress.report({ increment: perItemInc, message: `Compared ${ws.name}` });
