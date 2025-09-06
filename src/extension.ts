@@ -72,6 +72,10 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.workspace.getConfiguration("multiProjectsDiff");
 	const diffState = new DiffState();
 
+	// Track concurrent runs to avoid stale updates and allow cancellation
+	let currentRunId = 0;
+	let activeRunCts: vscode.CancellationTokenSource | null = null;
+
 	// Watch toggle state and context key for menus
 	let watchEnabled = false;
 	vscode.commands.executeCommand(
@@ -153,6 +157,13 @@ export function activate(context: vscode.ExtensionContext) {
 		chosenGroupName?: DiffGroup,
 		referenceFilePath?: string
 	) {
+		// Bump run id and cancel any previous run immediately
+		const myRunId = ++currentRunId;
+		if (activeRunCts) {
+			activeRunCts.cancel();
+			activeRunCts.dispose();
+		}
+		activeRunCts = new vscode.CancellationTokenSource();
 		try {
 			const editor = vscode.window.activeTextEditor;
 			if (!editor) {
@@ -264,7 +275,22 @@ export function activate(context: vscode.ExtensionContext) {
 
 					const workerPath = path.join(__dirname, "diffWorker.js");
 					const poolSize = Math.min(Math.max(1, os.cpus().length - 1), Math.max(1, Math.min(6, total)));
-					const pool = new WorkerPool<any, DiffResult>(workerPath, poolSize);
+					let pool: WorkerPool<any, DiffResult> | null = new WorkerPool<any, DiffResult>(workerPath, poolSize);
+					const localCancel = () => {
+						// Best-effort immediate shutdown of workers
+						if (pool) {
+							const p = pool;
+							pool = null;
+							// Fire and forget; awaiting in finally
+							p.close().catch(() => {});
+						}
+					};
+					const disposables: vscode.Disposable[] = [];
+					disposables.push(token.onCancellationRequested(localCancel));
+					// Also cancel if a newer run starts
+					if (activeRunCts) {
+						disposables.push(activeRunCts.token.onCancellationRequested(localCancel));
+					}
 					// Read the reference file once to avoid re-reading it in every worker
 					let baseContent: string | undefined = undefined;
 					try {
@@ -272,10 +298,14 @@ export function activate(context: vscode.ExtensionContext) {
 					} catch {}
 					try {
 						const tasks = workspaces.map(async (ws, idx) => {
-							if (token.isCancellationRequested) {
+							if (token.isCancellationRequested || (activeRunCts?.token.isCancellationRequested ?? false) || myRunId !== currentRunId) {
 								return undefined as unknown as DiffResult;
 							}
-							const res = await pool.run({
+							const p = pool;
+							if (!p) {
+								return undefined as unknown as DiffResult;
+							}
+							const res = await p.run({
 								currentFilePath: effectiveReferenceFilePath,
 								compareWorkspaceFilePath: ws.path,
 								compareRelativeFilePath: relativePath,
@@ -288,12 +318,35 @@ export function activate(context: vscode.ExtensionContext) {
 							progress.report({ increment: perItemInc, message: `Compared ${ws.name}` });
 							return res;
 						});
-						await Promise.allSettled(tasks);
+						// Wait for tasks to finish, or cancel early if this run becomes stale
+						await Promise.race([
+							Promise.allSettled(tasks).then(() => undefined),
+							new Promise<void>((resolve) => {
+								if (activeRunCts) {
+									const sub = activeRunCts.token.onCancellationRequested(() => {
+										resolve();
+										sub.dispose();
+									});
+								}
+							}),
+							new Promise<void>((resolve) => {
+								const sub = token.onCancellationRequested(() => {
+									resolve();
+									sub.dispose();
+								});
+							}),
+						]);
 					} finally {
-						await pool.close();
+						try {
+							if (pool) {
+								await pool.close();
+							}
+						} finally {
+							for (const d of disposables) d.dispose();
+						}
 					}
 
-					if (token.isCancellationRequested) {
+					if (token.isCancellationRequested || (activeRunCts?.token.isCancellationRequested ?? false) || myRunId !== currentRunId) {
 						return out.filter(Boolean) as DiffResult[];
 					}
 
@@ -319,6 +372,11 @@ export function activate(context: vscode.ExtensionContext) {
 				}
 			);
 
+			// If a newer run has started, don't update UI with stale data
+			if (myRunId !== currentRunId) {
+				return;
+			}
+
 			const state = {
 				filePath: currentFilePath,
 				results: results,
@@ -332,9 +390,12 @@ export function activate(context: vscode.ExtensionContext) {
 		} catch (error) {
 			// Handle any errors
 			console.error(error);
-			vscode.window.showErrorMessage(
-				"An error occurred while processing the diff."
-			);
+			// Avoid surfacing errors from stale runs
+			if (myRunId === currentRunId) {
+				vscode.window.showErrorMessage(
+					"An error occurred while processing the diff."
+				);
+			}
 			projectDiffView.refresh({
 				filePath: null,
 				results: [],
