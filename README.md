@@ -8,22 +8,48 @@
 Multi Projects Diff
 </h1>
 
-<h3 align="center" style="margin: 0 auto 1rem;">The project diff tool for VS Code.</h3>
+<h3 align="center" style="margin: 0 auto 0.25rem;">Compare a file across multiple projects</h3>
+<p align="center" style="margin: 0 auto 1rem; color: #6a737d;">Parallelized diffs, one-click actions, zero telemetry.</p>
 
 <p align="center">
- <a href="https://marketplace.visualstudio.com/items?itemName=FrancescoAnzalone.multi-projects-diff">
- <img src="https://vsmarketplacebadges.dev/version/FrancescoAnzalone.multi-projects-diff.png?label=Multi%20Project%20Diff" alt="Marketplace badge"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=FrancescoAnzalone.multi-projects-diff">
+    <img src="https://vsmarketplacebadges.dev/version/FrancescoAnzalone.multi-projects-diff.png?label=Multi%20Project%20Diff" alt="VS Marketplace version"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=FrancescoAnzalone.multi-projects-diff">
+    <img src="https://vsmarketplacebadges.dev/installs-short/FrancescoAnzalone.multi-projects-diff.png" alt="VS Marketplace installs"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=FrancescoAnzalone.multi-projects-diff">
+    <img src="https://vsmarketplacebadges.dev/rating-star/FrancescoAnzalone.multi-projects-diff.png" alt="VS Marketplace rating"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=FrancescoAnzalone.multi-projects-diff">
+    <img src="https://vsmarketplacebadges.dev/downloads-short/FrancescoAnzalone.multi-projects-diff.png" alt="VS Marketplace downloads"></a>
+  <a href="https://open-vsx.org/extension/FrancescoAnzalone/multi-projects-diff">
+    <img src="https://img.shields.io/open-vsx/v/FrancescoAnzalone/multi-projects-diff" alt="Open VSX version"></a>
+  <a href="https://open-vsx.org/extension/FrancescoAnzalone/multi-projects-diff">
+    <img src="https://img.shields.io/open-vsx/dt/FrancescoAnzalone/multi-projects-diff" alt="Open VSX downloads"></a>
 </p>
+
+<p align="center"><sub>Available on VS Code Marketplace and Open VSX.</sub></p>
 
 Compare the currently open file in the editor against corresponding files in other project paths (within the same configured group).
 
-![Image of UI overview](screenshot1.png)
+<div align="center" style="margin: 1rem 0;">
+  <a href="resources/demo.mp4">
+    <img src="resources/demo.gif" alt="Multi Projects Diff - quick demo" width="900">
+  </a>
+  <br/>
+  <sub>Click for HD video. GIF auto-loops.</sub>
+</div>
+
+## At a Glance
+
+- Diff a file across multiple repositories instantly.
+- Parallelized via Node `worker_threads` for a responsive UI.
+- One-click actions: open diff, push content, create missing files.
+- Clear indicators for added/removed lines and missing files.
 
 ## Features
 
 1. **Project Diff View:** A dedicated view in the Activity Bar lists all projects within the matched group for the current file, enabling quick comparison.
 
-2. **Multicore Diffing:** The diff tasks run in parallel via Node worker_threads, keeping VS Code responsive and cutting total diff time by 3-4× on medium/large files across multiple projects.
+2. **Multicore Diffing:** The diff tasks run in parallel via Node worker_threads, keeping VS Code responsive and cutting total diff time by 3-4x on medium/large files across multiple projects.
 
 3. **Flexible Reference File Selection:**
     *   **Set as Reference:** Use the inline "Set as Reference" action (pin icon) on any file in the list to make it the reference for comparison.
@@ -41,7 +67,22 @@ Compare the currently open file in the editor against corresponding files in oth
 
 6. **Group Selection:** If the current file doesn't belong to any defined group, or if you want to compare against a different group, use the "Pick Group" button to choose a specific group for comparison (only available if the file doesn't belong to any group).
 
-7. **Watch Mode:** Toggle Watch (eye icon) in the view toolbar to automatically use the currently active editor file as the reference and refresh the comparison whenever you switch files. Disable it with the eye‑closed icon.
+7. **Watch Mode:** Toggle Watch (eye icon) in the view toolbar to automatically use the currently active editor file as the reference and refresh the comparison whenever you switch files. Disable it with the eye-closed icon.
+
+## Quick Start
+
+1. Install the extension.
+2. Configure `"multiProjectsDiff.diffGroups"` in `settings.json` with your project paths.
+3. Open a file, then open the "MULTI PROJECTS DIFF" view to compare across projects.
+
+## Performance
+
+Parallel diffing improves throughput by approximately 3-4x on medium/large files across multiple projects while keeping the UI responsive.
+
+## Security & Privacy
+
+- Operates on local files only; no network calls.
+- No telemetry is collected by this extension.
 
 ## How to Use
 
