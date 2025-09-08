@@ -17,6 +17,8 @@
 - Dedicated Activity Bar container with the `arrow-swap` codicon for quicker access.
 - Improved progress indication using VS Code's built-in view-scoped progress bar.
 - Prevent running diffs on ineligible tabs: ignore VS Code diff/non-text/virtual tabs and skip very large (>2MB) or binary-like files; manual action now warns when the active tab isn't a single file.
+- Performance: Replace jsdiff with an optimized counts-only exact diff (tokenized +
+  trimmed), significantly speeding up large-file comparisons.
 - Updated README for new features.
 
 ## [1.2.0]
