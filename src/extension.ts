@@ -512,12 +512,20 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// React to active editor changes when watching is enabled
 	const activeEditorListener = vscode.window.onDidChangeActiveTextEditor(() => {
-		if (!watchEnabled) return;
+		if (!watchEnabled || !treeView.visible) return;
 		const eligiblePath = getEligibleActiveFilePath();
 		if (!eligiblePath) return;
 		vscode.commands.executeCommand("multiProjectsDiff.setActiveAsReference");
 	});
 	context.subscriptions.push(activeEditorListener);
+
+	// Refresh when the view becomes visible (if watching)
+	const visibilityListener = treeView.onDidChangeVisibility((e) => {
+		if (watchEnabled && e.visible) {
+			vscode.commands.executeCommand("multiProjectsDiff.setActiveAsReference");
+		}
+	});
+	context.subscriptions.push(visibilityListener);
 
 	// Command: Refresh Diff (only refreshes against current reference)
 	const refreshDiffCmd = vscode.commands.registerCommand(
