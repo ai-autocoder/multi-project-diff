@@ -1,5 +1,9 @@
 # Change Log
 
+## [2.0.1]
+
+- Fixed an issue where refreshing the diff would fail if there was no active editor.
+
 ## [2.0.0]
 
 ### New Features
