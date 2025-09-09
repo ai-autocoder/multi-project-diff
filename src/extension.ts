@@ -170,19 +170,6 @@ export function activate(context: vscode.ExtensionContext) {
 		activeRunCts = new vscode.CancellationTokenSource();
 		try {
 			const editor = vscode.window.activeTextEditor;
-			if (!editor) {
-				vscode.window.showErrorMessage("No active editor found.");
-				projectDiffView.refresh({
-					filePath: null,
-					results: [],
-					matchingGroup: null,
-					referenceFilePath: null,
-				});
-				diffState.clearState();
-				return;
-			}
-
-			const currentFilePath = editor.document.fileName;
 			const diffGroups: DiffGroup[] =
 				workspaceConfig.get<DiffGroup[]>("diffGroups") || [];
 
@@ -193,7 +180,13 @@ export function activate(context: vscode.ExtensionContext) {
 			const previousRef =
 				diffState.getCurrentState().referenceFilePath ?? undefined;
 			const effectiveReferenceFilePath =
-				referenceFilePath ?? previousRef ?? currentFilePath;
+				referenceFilePath ?? previousRef ?? undefined;
+
+			// If we have no basis for a reference, try to set it from the active file
+			if (!effectiveReferenceFilePath) {
+				await vscode.commands.executeCommand("multiProjectsDiff.setActiveAsReference");
+				return;
+			}
 
 			// Attempt to find which group the reference file belongs to
 			let matchingGroup: DiffGroup | undefined;
@@ -243,7 +236,7 @@ export function activate(context: vscode.ExtensionContext) {
 				}
 
 				const state = {
-					filePath: currentFilePath,
+					filePath: effectiveReferenceFilePath,
 					results: [],
 					matchingProject: { name: "", path: "" },
 					matchingGroup: null,
@@ -447,7 +440,7 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 
 			const state = {
-				filePath: currentFilePath,
+				filePath: effectiveReferenceFilePath,
 				results: results,
 				matchingGroup,
 				matchingProject,
